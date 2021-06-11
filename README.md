@@ -15,7 +15,8 @@ The Goal of this project is to use the data from the accelerometers on the belt,
 
 These participants are asked to perform barbell lifts correctly and incorrectly in 5 different ways, and data is noted.
 
-This project is based on the research which was carried out in the past, and to gain more insight about the specifics following website is available to lookout for. 
+This project is based on the research which was carried out in the past, and to gain more insight about the specifics are available in the following website.
+
 http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
 
 
