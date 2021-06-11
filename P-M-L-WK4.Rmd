@@ -244,7 +244,7 @@ To summarize the accuracy of all the  models:
 
 Lets collect the Accuracy from all the Models and find which one is the most accurate one.
 
-```{r results='markup', echo=FALSE}
+```{r results = }
 tab <- as.matrix(c(DT_CM$overall[1],cM_FM$overall[1],GBM_CM$overall[1],SVM_CM$overall[1]))
 rownames(tab) <- c("Decision Tree", "Random Forest", "GBM", "SVM")
 colnames(tab) <- ("Accuracy")
