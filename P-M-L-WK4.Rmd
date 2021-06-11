@@ -1,0 +1,267 @@
+---
+title: "Practical-ML- Project-WK4"
+author: "Ami S"
+date: "10/06/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## **Overview**:
+
+This assignment consist of developing a machine learning algorithm to the 20 test cases which are available with this project and test the data while submitting the predictions in appropriate format so that it is reproducible and answering the prediction quiz following this project. 
+
+***Background:***
+There are many devices that are available in the market to collect large amount of data relating to personal activity such as Jawbone up, Nike FuelBand and Fitbit.
+
+These devices are part of the quantifies self movements wherein group of enthusiasts who take measurements about themselves regularly to imporve their health, and find patterns in their behaviour, or because they are tech geeks.
+Activities are quantifies regularly on how much they do but no one quantifies how well they  do, hence this project sheds some light on that as well.
+
+***GOAL:***
+The Goal of this project is to use the data from the accelerometers on the belt, forearm, arm, and dumbell of 6 participants.
+
+These participants are asked to perform barbell lifts correctly and incorrectly in 5 different ways, and data is noted.
+
+This project is based on the research which was carried out in the past, and to gain more insight about the specifics following website is available to lookout for. 
+http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+
+***Data:***
+
+### The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+### The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+### The data for this project come from this source:
+
+http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.
+
+
+### LEts being with loading all the required packages and libraries:
+
+```{r comment= FALSE}
+## Loading the libraries of the  required packages:
+library(lattice)
+library(ggplot2)
+library(caret)
+library(kernlab)
+library(rattle)
+library(corrplot)
+require(dplyr)
+library(reshape2)
+library(gridExtra)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(RColorBrewer)
+```
+
+### Loading and cleaning the data:
+
+```{r}
+testing_data <- read.csv("pml-testing.csv",strip.white = TRUE, na.strings=c('#DIV/0!', '', 'NA'))
+training_data <- read.csv("pml-training.csv",strip.white = TRUE ,na.strings=c('#DIV/0!', '', 'NA'))
+
+dim(testing_data)
+dim(training_data)
+
+```
+
+Here we are partitioning the training data set into training set and validation set:
+
+```{r}
+Intrain <- createDataPartition(training_data$classe, p = 0.75, list = FALSE)
+train <- training_data[Intrain, ]
+valid <- training_data[-Intrain, ]
+
+dim(Intrain)
+dim(train)
+dim(valid)
+```
+
+Now we clean-up the variables with zero variance
+
+```{r}
+##Now removing the data which are irrelevant for the prediction:
+# cleaning the data with zero variances in the variables:
+
+nzv <- nearZeroVar(train)
+nzv
+train <- train[,-nzv]
+valid <- valid[,-nzv]
+
+
+dim(train)
+dim(valid)
+```
+
+There seems to be variables with NA, hence cleaning and sorting the data 
+which are useful for the prediction model:
+
+
+```{r}
+fval <- sapply(train, function(x) mean(is.na(x))) > 0.95
+train <- train[,fval == FALSE]
+
+## Following the same step on the validation dataset:
+#sval <- sapply(valid, function(x) mean(is.na(x))) > 0.95
+valid <- valid[,fval == FALSE]
+## the roughly gathered dataset:
+
+dim(train)
+dim(valid)
+```
+
+Now both the train and valid dataset contain variables that are reduced to 59
+which previously were 160. 
+
+These 59 variables in the dataset are useful in further prediction models and
+determining the answer, However the first five variables are the identifiers and does not play any role in the predictions hence the best option would be to remove them form the data set.
+
+
+```{r}
+train <- train[, -c(1:5)]
+valid <- valid[, -c(1:5)]
+
+dim(train)
+dim(valid)
+```
+
+## **Corerelation Analysis:**
+
+Now the data is clean and can be used for building the prediction models.
+
+Before building the models lets try to do the correlation analysis:
+
+```{r}
+#Selecting the  FPC for the first principal component order:
+
+correlation_matrix <- cor(train[ , -54])
+corrplot(correlation_matrix, order = "FPC", method = "circle", type = "lower",
+         tl.cex = 0.6, tl.col = rgb(0,0,0))
+```
+
+## *Prediction Models:*
+
+Now We will try to build models:
+since i am trying to learn more I would like to try out different models and cross-check data with models such as decision tree, a random forest,  a generalized boosted model and SVM:
+
+Note that we will use the train dataset for these model which are filtered
+from unwanted variables, and  than we will test them on the validation set under the dataset valid. 
+
+We will try out all model to find best model for testing the final testing dataset.
+
+##  **Decision Tree:**
+
+
+```{r}
+set.seed(1234)
+Dee_Tree <- train(classe ~., data = train, method = "rpart",
+                  trControl = trainControl(method = "cv", number = 3), 
+                  tuneLength = 5)
+
+fancyRpartPlot(Dee_Tree$finalModel)
+
+predict_DEE_TREE <- predict(Dee_Tree, newdata = valid)
+
+y <- as.factor(valid$classe)
+DT_CM <- confusionMatrix(predict_DEE_TREE, y)
+print(DT_CM)
+```
+
+
+##  **Random Forest:**
+
+```{r}
+set.seed(1234)
+
+Forest_model <- train(classe ~., data = train, method = "rf",
+                      trControl = trainControl(method = "repeatedcv",
+                                               number = 5,repeats =1), 
+                      verbose = FALSE)
+Forest_model$finalModel
+
+
+```
+
+```{r}
+#The Prediction of the Random Forest Model is now done on the valid dataset.
+
+
+predic_FM <- predict(Forest_model, newdata = valid)
+x <- as.factor(valid$classe)
+cM_FM <- confusionMatrix(predic_FM, x)
+print(cM_FM)
+
+```
+
+## **Generalized boosted Model:**
+
+```{r}
+set.seed(1234)
+GBM_model <- train(classe ~., data = train, method = "gbm",
+                  trControl = trainControl(method = "repeatedcv", number = 5,
+                                           repeats = 1), verbose = FALSE)
+
+# Now lets use this Model to predict on the validation set which we separated previously
+
+Predict_GBM <- predict(GBM_model, newdata = valid)
+
+z <- as.factor(valid$classe)
+
+GBM_CM <- confusionMatrix(Predict_GBM, z)
+print(GBM_CM)
+```
+
+
+##  **Svm:**
+
+```{r}
+set.seed(1234)
+
+SVM_model <- train(classe ~., data = train, method = "svmLinear",
+                  trControl = trainControl(method = "cv", number = 3), 
+                  tuneLength = 5)
+
+SVM_model$finalModel
+  
+  
+# Prediction time on the validation data set:
+
+Predict_SVM <- predict(SVM_model, newdata = valid)
+V <- as.factor(valid$classe)
+SVM_CM <- confusionMatrix(Predict_SVM, V)
+print(SVM_CM)
+```
+
+Now lets see the result of all the accuracy of all the models
+To summarize the accuracy of all the  models:
+
+Lets collect the Accuracy from all the Models and find which one is the most accurate one.
+
+```{r results='markup', echo=FALSE}
+tab <- as.matrix(c(DT_CM$overall[1],cM_FM$overall[1],GBM_CM$overall[1],SVM_CM$overall[1]))
+rownames(tab) <- c("Decision Tree", "Random Forest", "GBM", "SVM")
+colnames(tab) <- ("Accuracy")
+print(tab)
+
+```
+
+Looking at the data the best models are Random Forest and GBM with 0.99% and 
+0.98% accuracy.
+
+Hence, we will use the Random Model on the final testing_data set aside initially to predict.
+
+
+Applying the best Predictive Model to the Test set that was set aside before starting the test.
+
+```{r}
+Predict_final <- predict(Forest_model, newdata = testing_data)
+Predict_final
+```
+
